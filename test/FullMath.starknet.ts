@@ -9,11 +9,15 @@ var Q128 = new BN(2).pow(new BN(128))
 var MaxUint256 = new BN("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
 function toUint256(x: number | BN | string): Uint256 {
     var num = new BN(x);
-    return {low: num.div(Q128), high: num.mod(Q128)};
+    return {high: num.div(Q128), low: num.mod(Q128)};
 }
 
 function toBN(x: Uint256) {
-    return new BN(x.low).mul(Q128).add(new BN(x.high));
+    return new BN(x.high).mul(Q128).add(new BN(x.low));
+}
+
+function Uint256toString(x: Uint256) {
+    return x.high.toString() + x.low.toString();
 }
 
 Decimal.config({ toExpNeg: -500, toExpPos: 500 })
@@ -44,28 +48,31 @@ describe('FullMath', () => {
   
       it('all max inputs', async () => {
         const res = await fullMath.mulDiv_aa9a0912(toUint256(MaxUint256), toUint256(MaxUint256), toUint256(MaxUint256))
-        expect(res[0]).to.eq(toUint256(MaxUint256))
-      })
+        expect(Uint256toString(res[0])).to.eq(Uint256toString(toUint256(MaxUint256)))
+    })
   
       it('accurate without phantom overflow', async () => {
         const result = toUint256(Q128.div(new BN(3)))
-        expect(
-          await fullMath.mulDiv_aa9a0912(
+        const res = await fullMath.mulDiv_aa9a0912(
             toUint256(Q128),
             /*0.5=*/ toUint256(new BN(50).mul(Q128).div(new BN(100))),
             /*1.5=*/ toUint256(new BN(150).mul(Q128).div(new BN(100)))
           )
-        ).to.eq(result)
+        expect(
+            Uint256toString(res[0])
+        ).to.eq(Uint256toString(result))
       })
   
       it('accurate with phantom overflow', async () => {
         const result = toUint256(new BN(4375).mul(Q128).div(new BN(1000)))
-        expect(await fullMath.mulDiv_aa9a0912(toUint256(Q128), toUint256(new BN(35).mul(Q128)), toUint256(new BN(8).mul(Q128)))).to.eq(result)
+        const res = await fullMath.mulDiv_aa9a0912(toUint256(Q128), toUint256(new BN(35).mul(Q128)), toUint256(new BN(8).mul(Q128)))
+        expect(Uint256toString(res[0])).to.eq(Uint256toString(result))
       })
   
       it('accurate with phantom overflow and repeating decimal', async () => {
         const result = toUint256(new BN(1).mul(Q128).div(new BN(3)))
-        expect(await fullMath.mulDiv_aa9a0912(toUint256(Q128), toUint256(new BN(1000).mul(Q128)), toUint256(new BN(3000).mul(Q128)))).to.eq(result)
+        const res = await fullMath.mulDiv_aa9a0912(toUint256(Q128), toUint256(new BN(1000).mul(Q128)), toUint256(new BN(3000).mul(Q128)))
+        expect(Uint256toString(res[0])).to.eq(Uint256toString(result))
       })
     })
   
@@ -103,33 +110,37 @@ describe('FullMath', () => {
         ).to.be.reverted
       })
   
-      it('all max inputs', async () => {
-        expect(await fullMath.mulDivRoundingUp_0af8b27f(toUint256(MaxUint256), toUint256(MaxUint256), toUint256(MaxUint256))).to.eq(toUint256(MaxUint256))
+      it('all max inputs', async () => { // FAILS
+        const res = await fullMath.mulDivRoundingUp_0af8b27f(toUint256(MaxUint256), toUint256(MaxUint256), toUint256(MaxUint256))
+        expect(Uint256toString(res[0])).to.eq(Uint256toString(toUint256(MaxUint256)))
       })
   
       it('accurate without phantom overflow', async () => {
         const result = toUint256(Q128.div(new BN(3)).add(new BN(1)))
-        expect(
-          await fullMath.mulDivRoundingUp_0af8b27f(
+        const res = await fullMath.mulDivRoundingUp_0af8b27f(
             toUint256(Q128),
             /*0.5=*/ toUint256(new BN(50).mul(Q128).div(new BN(100))),
             /*1.5=*/ toUint256(new BN(150).mul(Q128).div(new BN(100)))
           )
-        ).to.eq(result)
+        expect(
+          Uint256toString(res[0])
+        ).to.eq(Uint256toString(result))
       })
   
       it('accurate with phantom overflow', async () => {
         const result = toUint256(new BN(4375).mul(Q128).div(new BN(1000)))
-        expect(await fullMath.mulDivRoundingUp_0af8b27f(toUint256(Q128), toUint256(new BN(35).mul(Q128)), toUint256(new BN(8).mul(Q128)))).to.eq(
-          result
+        const res = await fullMath.mulDivRoundingUp_0af8b27f(toUint256(Q128), toUint256(new BN(35).mul(Q128)), toUint256(new BN(8).mul(Q128)))
+        expect(Uint256toString(res[0])).to.eq(
+          Uint256toString(result)
         )
       })
   
-      it('accurate with phantom overflow and repeating decimal', async () => {
+      it('accurate with phantom overflow and repeating decimal', async () => { // FAILS
         const result = toUint256(new BN(1).mul(Q128).div(new BN(3)).add(new BN(1)))
+        const res = await fullMath.mulDivRoundingUp_0af8b27f(toUint256(Q128), toUint256(new BN(1000).mul(Q128)), toUint256(new BN(3000).mul(Q128)))
         expect(
-          await fullMath.mulDivRoundingUp_0af8b27f(toUint256(Q128), toUint256(new BN(1000).mul(Q128)), toUint256(new BN(3000).mul(Q128)))
-        ).to.eq(result)
+          Uint256toString(res[0])
+        ).to.eq(Uint256toString(result))
       })
     })
   
